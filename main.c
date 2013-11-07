@@ -6,6 +6,10 @@
 unsigned char direction;
 unsigned char moveDetected = 0;
 char player = 0;
+char flag = 0;
+char string1[] = "You";
+char string2[] = "LOOOOSE!";
+char string3[] = "WIN!";
 
 /*
  * main.c
@@ -24,13 +28,16 @@ int main(void) {
 
 	while (1) {
 
+		TACTL &= ~(MC1 | MC0);
 		LCDclear();
 		player = 0x80;
+		flag = 0;
 		printPlayer(player);
+		TACTL |= MC1;
 
 		char gameOver = 0;
 
-		while (gameOver == 0) {
+		while (!gameOver) {
 
 			if (moveDetected != 0) {
 				clearPlayer(player);
@@ -38,7 +45,8 @@ int main(void) {
 				moveDetected = 0;
 			}
 
-			if(player == 0xC7) {
+			gameOver = didPlayerWin(player);
+			if (flag == 7) {
 				gameOver = 1;
 			}
 		}
@@ -54,6 +62,21 @@ int main(void) {
 
 void init_timer() {
 	// do timer initialization work
+	TACTL &= ~(MC1 | MC0); // stop timer
+
+	TACTL |= TACLR; // clear TAR
+
+	TACTL |= TASSEL1; // configure for SMCLK -
+
+	TACTL |= ID1 | ID0; // divide clock by 8 -
+
+	TACTL &= ~TAIFG; // clear interrupt flag
+
+	TACTL |= MC1; // set count mode to continuous
+
+	TACTL |= TAIE; // enable interrupt
+
+	__enable_interrupt();
 }
 
 void init_buttons() {
@@ -64,6 +87,12 @@ void init_buttons() {
 	P1IES |= BIT1 | BIT2 | BIT3 | BIT4; // configure interrupt to sense falling edges
 
 	P1IFG &= ~(BIT1 | BIT2 | BIT3 | BIT4);                // clear flags
+}
+
+#pragma vector = TIMER0_A1_VECTOR
+__interrupt void TIMER0_A1_ISR(void) {
+	TACTL &= ~TAIFG; // clear interrupt flag
+	flag += 1;
 }
 
 #pragma vector=PORT1_VECTOR
