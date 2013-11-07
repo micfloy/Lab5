@@ -7,6 +7,7 @@ unsigned char direction;
 unsigned char moveDetected = 0;
 char player = 0;
 char flag = 0;
+char buttons[] = {BIT1, BIT2, BIT3, BIT4};
 char string1[] = "You";
 char string2[] = "LOOOOSE!";
 char string3[] = "WIN!";
@@ -48,18 +49,22 @@ int main(void) {
 
 			if (didPlayerWin(player)) {
 				gameOver = 1;
+
 				LCDclear();
 				writeString(string1);
 				cursorToLineTwo();
 				writeString(string3);
+
 				resetGame();
 			}
 			if (flag == 7) {
 				gameOver = 1;
+
 				LCDclear();
 				writeString(string1);
 				cursorToLineTwo();
 				writeString(string2);
+
 				resetGame();
 			}
 		}
@@ -103,13 +108,8 @@ void init_buttons() {
 }
 
 void resetGame() {
-	char pressReleased = 0;
-	while (!pressReleased) {
-		if (isP1ButtonPressed(BIT1 | BIT2 | BIT3 | BIT4)) {
-			waitForP1ButtonRelease(BIT1 | BIT2 | BIT3 | BIT4);
-			pressReleased = 1;
-		}
-	}
+	pollP1Buttons(buttons, 4);
+	moveDetected = 0;
 }
 
 #pragma vector = TIMER0_A1_VECTOR
