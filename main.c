@@ -33,11 +33,12 @@ int main(void) {
 		while (gameOver == 0) {
 
 			if (moveDetected != 0) {
+				clearPlayer(player);
 				player = movePlayer(player, moveDetected);
 				moveDetected = 0;
 			}
 
-			if(player == 0x87) {
+			if(player == 0xC7) {
 				gameOver = 1;
 			}
 		}
