@@ -3,11 +3,10 @@
 #include "LCD/LCD.h"
 #include "buttons/button.h"
 
-unsigned char direction;
-unsigned char moveDetected = 0;
 char player = 0;
 char flag = 0;
-char buttons[] = {BIT1, BIT2, BIT3, BIT4};
+char gameOver = 0;
+char buttons[] = { BIT1, BIT2, BIT3, BIT4 };
 char string1[] = "You";
 char string2[] = "LOOOOSE!";
 char string3[] = "WIN!";
@@ -18,6 +17,7 @@ char string3[] = "WIN!";
 void init_timer();
 void init_buttons();
 void resetGame();
+void testAndRespondToButtonPush(char buttonToTest);
 
 int main(void) {
 	WDTCTL = (WDTPW | WDTHOLD);
@@ -34,36 +34,31 @@ int main(void) {
 		LCDclear();
 		player = 0x80;
 		flag = 0;
+		gameOver = 0;
 		printPlayer(player);
 		TACTL |= MC1;
 
-		char gameOver = 0;
-
 		while (!gameOver) {
-
-			if (moveDetected != 0) {
-				clearPlayer(player);
-				player = movePlayer(player, moveDetected);
-				moveDetected = 0;
-			}
 
 			if (didPlayerWin(player)) {
 				gameOver = 1;
-
 				LCDclear();
 				writeString(string1);
 				cursorToLineTwo();
 				writeString(string3);
+				_delay_cycles(100000);
 
 				resetGame();
+
 			}
 			if (flag == 7) {
-				gameOver = 1;
 
+				gameOver = 1;
 				LCDclear();
 				writeString(string1);
 				cursorToLineTwo();
 				writeString(string2);
+
 
 				resetGame();
 			}
@@ -103,13 +98,52 @@ void init_buttons() {
 
 	P1IE |= BIT1 | BIT2 | BIT3 | BIT4;                  // enable the interrupts
 	P1IES |= BIT1 | BIT2 | BIT3 | BIT4; // configure interrupt to sense falling edges
-
 	P1IFG &= ~(BIT1 | BIT2 | BIT3 | BIT4);                // clear flags
 }
 
 void resetGame() {
-	pollP1Buttons(buttons, 4);
-	moveDetected = 0;
+
+	_delay_cycles(100000);
+	char resetButton;
+	resetButton = pollP1Buttons(buttons, 4);
+	waitForP1ButtonRelease(resetButton);
+
+}
+void movingPlayer(char buttonToTest) {
+	switch (buttonToTest) {
+	case BIT1:
+		player = movePlayer(player, UP);
+		break;
+	case BIT2:
+		player = movePlayer(player, DOWN);
+		break;
+	case BIT3:
+		player = movePlayer(player, LEFT);
+		break;
+	case BIT4:
+		player = movePlayer(player, RIGHT);
+		break;
+	}
+}
+
+void testAndRespondToButtonPush(char buttonToTest) {
+
+	if (buttonToTest & P1IFG) {
+
+		if (buttonToTest & P1IES) {
+
+			movingPlayer(buttonToTest);
+			flag = 0;
+			TACTL |= MC1;
+
+		} else {
+
+			debounce();
+		}
+
+		P1IES ^= buttonToTest;
+		P1IFG &= ~buttonToTest;
+	}
 }
 
 #pragma vector = TIMER0_A1_VECTOR
@@ -120,23 +154,11 @@ __interrupt void TIMER0_A1_ISR(void) {
 
 #pragma vector=PORT1_VECTOR
 __interrupt void Port_1_ISR(void) {
-
-	if (P1IFG & BIT1) {
-		P1IFG &= ~BIT1;                         // clear flag
-		moveDetected = UP;
+	if(!gameOver) {
+		testAndRespondToButtonPush(BIT1);
+		testAndRespondToButtonPush(BIT2);
+		testAndRespondToButtonPush(BIT3);
+		testAndRespondToButtonPush(BIT4);
 	}
-
-	if (P1IFG & BIT2) {
-		P1IFG &= ~BIT2;                         // clear flag
-		moveDetected = DOWN;
-	}
-
-	if (P1IFG & BIT3) {
-		P1IFG &= ~BIT3;                         // clear flag
-		moveDetected = LEFT;
-	}
-	if (P1IFG & BIT4) {
-		P1IFG &= ~BIT4;
-		moveDetected = RIGHT;
-	}
+	P1IFG &= ~(BIT1|BIT2|BIT3|BIT4);
 }
