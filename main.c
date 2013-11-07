@@ -16,6 +16,7 @@ char string3[] = "WIN!";
  */
 void init_timer();
 void init_buttons();
+void resetGame();
 
 int main(void) {
 	WDTCTL = (WDTPW | WDTHOLD);
@@ -45,9 +46,21 @@ int main(void) {
 				moveDetected = 0;
 			}
 
-			gameOver = didPlayerWin(player);
+			if (didPlayerWin(player)) {
+				gameOver = 1;
+				LCDclear();
+				writeString(string1);
+				cursorToLineTwo();
+				writeString(string3);
+				resetGame();
+			}
 			if (flag == 7) {
 				gameOver = 1;
+				LCDclear();
+				writeString(string1);
+				cursorToLineTwo();
+				writeString(string2);
+				resetGame();
 			}
 		}
 
@@ -87,6 +100,16 @@ void init_buttons() {
 	P1IES |= BIT1 | BIT2 | BIT3 | BIT4; // configure interrupt to sense falling edges
 
 	P1IFG &= ~(BIT1 | BIT2 | BIT3 | BIT4);                // clear flags
+}
+
+void resetGame() {
+	char pressReleased = 0;
+	while (!pressReleased) {
+		if (isP1ButtonPressed(BIT1 | BIT2 | BIT3 | BIT4)) {
+			waitForP1ButtonRelease(BIT1 | BIT2 | BIT3 | BIT4);
+			pressReleased = 1;
+		}
+	}
 }
 
 #pragma vector = TIMER0_A1_VECTOR
