@@ -1,3 +1,12 @@
+/**
+ * Author: C2C Michael Bentley
+ * Date Last Modified: 11/11/13
+ * Description: This is a game played on a 2x8 LCD display, using 4 buttons.  The player may move in all four directions and the
+ * only goal is to move from the top-left corner of the screen to the bottom-right corner.  They player may only wait a couple seconds
+ * between moves or they will lose.
+ *
+ */
+
 #include <msp430.h> 
 #include "game_shell/game.h"
 #include "LCD/LCD.h"
@@ -22,6 +31,7 @@ void testAndRespondToButtonPush(char buttonToTest);
 int main(void) {
 	WDTCTL = (WDTPW | WDTHOLD);
 
+	// Initialization
 	init_timer();
 	init_buttons();
 	__enable_interrupt();
@@ -30,6 +40,7 @@ int main(void) {
 
 	while (1) {
 
+		// Initialization for every time the game resets
 		TACTL &= ~(MC1 | MC0);
 		LCDclear();
 		player = 0x80;
@@ -40,6 +51,7 @@ int main(void) {
 
 		while (!gameOver) {
 
+			// If the player makes it to the bottom-right corner, the game will display the winning message.
 			if (didPlayerWin(player)) {
 				gameOver = 1;
 				LCDclear();
@@ -51,6 +63,7 @@ int main(void) {
 				resetGame();
 
 			}
+			// If the player takes too long to move, they lose.
 			if (flag == 7) {
 
 				gameOver = 1;
@@ -58,7 +71,6 @@ int main(void) {
 				writeString(string1);
 				cursorToLineTwo();
 				writeString(string2);
-
 
 				resetGame();
 			}
@@ -101,6 +113,7 @@ void init_buttons() {
 	P1IFG &= ~(BIT1 | BIT2 | BIT3 | BIT4);                // clear flags
 }
 
+// Waits for a button to be pressed and then resets the player to the starting position.
 void resetGame() {
 
 	_delay_cycles(100000);
@@ -109,6 +122,7 @@ void resetGame() {
 	waitForP1ButtonRelease(resetButton);
 
 }
+// Helper method to testAndRespondToButtonPush.  Calls movePlayer for the specific button that was pushed.
 void movingPlayer(char buttonToTest) {
 	switch (buttonToTest) {
 	case BIT1:
@@ -126,14 +140,16 @@ void movingPlayer(char buttonToTest) {
 	}
 }
 
+// Resets the move timer and calls the movingPlayer method to move the player in the direction for the button pressed.
 void testAndRespondToButtonPush(char buttonToTest) {
 
+	// If pushed
 	if (buttonToTest & P1IFG) {
-
+		// If the edge is rising/falling (changes every time the method is called), move the player in the direction indicated by the button.
 		if (buttonToTest & P1IES) {
 
 			movingPlayer(buttonToTest);
-			flag = 0;
+			flag = 0;			// Clear the timer flag.
 			TACTL |= MC1;
 
 		} else {
@@ -141,24 +157,26 @@ void testAndRespondToButtonPush(char buttonToTest) {
 			debounce();
 		}
 
-		P1IES ^= buttonToTest;
-		P1IFG &= ~buttonToTest;
+		P1IES ^= buttonToTest;			// Toggle the edge to trigger on.
+		P1IFG &= ~buttonToTest;			// Clear the button flag.
 	}
 }
 
+// Timer interrupt triggers about every third of a second.
 #pragma vector = TIMER0_A1_VECTOR
 __interrupt void TIMER0_A1_ISR(void) {
 	TACTL &= ~TAIFG; // clear interrupt flag
 	flag += 1;
 }
 
+// Triggers every time a change is detected in the button states.
 #pragma vector=PORT1_VECTOR
 __interrupt void Port_1_ISR(void) {
-	if(!gameOver) {
+	if (!gameOver) {
 		testAndRespondToButtonPush(BIT1);
 		testAndRespondToButtonPush(BIT2);
 		testAndRespondToButtonPush(BIT3);
 		testAndRespondToButtonPush(BIT4);
 	}
-	P1IFG &= ~(BIT1|BIT2|BIT3|BIT4);
+	P1IFG &= ~(BIT1 | BIT2 | BIT3 | BIT4);
 }
