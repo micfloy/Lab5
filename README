@@ -3,3 +3,5 @@ Date Completed: 11/11/13
 
 This program is a simple game played on a 2x8 LCD display using 4 push buttons. The objective of the game
 is to move from one corner to the opposite corner.  
+
+Documentation:  I looked at C2C Tymnchenko's code to understand how to properly implement my B functionality.
